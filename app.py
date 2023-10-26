@@ -102,12 +102,12 @@ def createGraph(product_name):
     proms =[]
     altos=[]
     bajos=[]
-    valores = products.find({"Item_buscado": product_name})
     for f in fechas:
         acum = 0
         bajo2 = 99999999999999
         alto2 = 0
         count = 0
+        valores = products.find({"Item_buscado": product_name})
         for i in valores:
             if (f==i["Fecha"]):
                 acum += int(i["Precio"])
