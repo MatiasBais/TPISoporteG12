@@ -17,7 +17,7 @@ app = Flask(__name__)
 def get_item():
     if request.method == 'POST':
         item = request.form["it"]
-        r = requests.get('https://listado.mercadolibre.com.ar/'+item)
+        r = requests.get('https://listado.mercadolibre.com.ar/nuevo/'+item)
         r.status_code
 
         fecha = str(datetime.now())
@@ -31,9 +31,12 @@ def get_item():
         dom = etree.HTML(str(soup))
         precios = dom.xpath('//li[@class="ui-search-layout__item"]//span[@class="andes-money-amount ui-search-price__part ui-search-price__part--medium andes-money-amount--cents-superscript"]//span[@class="andes-money-amount__fraction"]')
         precios = [i.text.replace('.','') for i in precios]
+        imgs = soup.find_all('img', attrs={"class": "ui-search-result-image__element"})
 
-        d = [ { 'Item_buscado' : item, 'Titulo': x, 'Precio': y, 'URL': z, 'Fecha': fecha }
-            for x, y, z in zip(titulos[:10], precios[:10], urls[:10]) ]
+        imgs = [i['data-src'] for i in imgs]
+
+        d = [{'Item_buscado': item, 'Titulo': x, 'Precio': y, 'URL': z, 'Fecha': fecha, 'Img': img}
+             for x, y, z, img in zip(titulos[:10], precios[:10], urls[:10], imgs[:10])]
         pretty_json = json.dumps(d, sort_keys=True, indent=4)
         collection = db["Grupo12Collection"]
 
@@ -42,15 +45,15 @@ def get_item():
 
         # Inserta los datos en la colección
         collection.insert_many(data)
-        return redirect(url_for("item", product_name=item))
+        return redirect(url_for("item", product_name=item, search_date=fecha))
     else:
         return render_template('index.html')
     
 
-@app.route("/<product_name>")
-def item(product_name):
+@app.route("/<product_name>/<search_date>")
+def item(product_name, search_date):
     products = db["Grupo12Collection"]
-    valores = products.find({"Item_buscado": product_name})
+    valores = products.find({"Item_buscado": product_name, "Fecha": search_date})
     acum = 0
     bajo2 = 9999999999999999
     alto2 = 0
