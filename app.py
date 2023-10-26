@@ -7,11 +7,14 @@ from datetime import datetime
 import database as dbase  
 from bson import ObjectId
 from product import Product
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
+import io
+import random
 
 db = dbase.dbConnection()
 
 app = Flask(__name__)
-
 #Method get
 @app.route('/', methods=['POST', 'GET'])
 def get_item():
@@ -79,6 +82,55 @@ def notFound(error=None):
     response.status_code = 404
     return response
 
+
+@app.route('/plot.png/<product_name>')
+def plot_png(product_name):
+    fig = createGraph(product_name)
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    return Response(output.getvalue(), mimetype='image/png')
+
+
+def createGraph(product_name):
+    products = db["Grupo12Collection"]
+    valores = products.find({"Item_buscado": product_name})
+    fechas=[]
+    for i in valores:
+        fecha = i["Fecha"]
+        if fecha not in fechas:
+            fechas.append(fecha)
+    proms =[]
+    altos=[]
+    bajos=[]
+    valores = products.find({"Item_buscado": product_name})
+    for f in fechas:
+        acum = 0
+        bajo2 = 99999999999999
+        alto2 = 0
+        count = 0
+        for i in valores:
+            if (f==i["Fecha"]):
+                acum += int(i["Precio"])
+                count = count+1
+                if(int(i["Precio"])< bajo2):
+                    bajo2 = int(i["Precio"])
+                if(int(i["Precio"])> alto2):
+                    alto2 = int(i["Precio"])
+        if (count!=0):
+            proms.append(acum/count)
+            altos.append(alto2)
+            bajos.append(bajo2)
+        else:
+            fechas.remove(f)
+
+
+    fig = Figure()
+    axis = fig.add_subplot(1, 1, 1)
+    axis.plot(fechas, proms, color="green", label="Promedio",marker='o')
+    axis.plot(fechas, altos, color="blue", label="Altos",marker='o')
+    axis.plot(fechas, bajos, color="red", label="Bajos",marker='o')
+    axis.legend()
+    return fig
 
 
 if __name__ == '__main__':
