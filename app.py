@@ -19,7 +19,7 @@ app = Flask(__name__)
 @app.route('/', methods=['POST', 'GET'])
 def get_item():
     if request.method == 'POST':
-        item = request.form["it"]
+        item = request.form["it"].lower()
         r = requests.get('https://listado.mercadolibre.com.ar/nuevo/'+item)
         r.status_code
 
@@ -70,7 +70,7 @@ def item(product_name, search_date):
     acumulado = str(int(acum/products.count_documents({"Item_buscado": product_name})))
     minItem = products.find_one({ "$and":[{"Item_buscado": product_name}, {"Precio": str(bajo2)}]})
     maxItem = products.find_one({ "$and":[{"Item_buscado": product_name}, {"Precio": str(alto2)}]})
-    return render_template('index2.html', acumulado=acumulado, bajo2=bajo2, alto2=alto2, product_name=product_name, minItem=minItem, maxItem=maxItem)
+    return render_template('index2.html', acumulado=acumulado, bajo2=bajo2, alto2=alto2, product_name=product_name.upper(), minItem=minItem, maxItem=maxItem)
 
 @app.errorhandler(404)
 def notFound(error=None):
@@ -85,7 +85,7 @@ def notFound(error=None):
 
 @app.route('/plot.png/<product_name>')
 def plot_png(product_name):
-    fig = createGraph(product_name)
+    fig = createGraph(product_name.lower())
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
     return Response(output.getvalue(), mimetype='image/png')
@@ -93,7 +93,7 @@ def plot_png(product_name):
 
 def createGraph(product_name):
     products = db["Grupo12Collection"]
-    valores = products.find({"Item_buscado": product_name})
+    valores = products.find({"Item_buscado": product_name.lower()}).sort("Fecha")
     fechas=[]
     for i in valores:
         fecha = i["Fecha"]
@@ -107,7 +107,7 @@ def createGraph(product_name):
         bajo2 = 99999999999999
         alto2 = 0
         count = 0
-        valores = products.find({"Item_buscado": product_name})
+        valores = products.find({"Item_buscado": product_name.lower()})
         for i in valores:
             if (f==i["Fecha"]):
                 acum += int(i["Precio"])
