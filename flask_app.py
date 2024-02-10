@@ -5,7 +5,6 @@ from lxml import etree
 import json
 from datetime import datetime
 import database as dbase  
-from bson import ObjectId
 from product import Product
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -20,34 +19,37 @@ app = Flask(__name__)
 def get_item():
     if request.method == 'POST':
         item = request.form["it"].lower()
-        r = requests.get('https://listado.mercadolibre.com.ar/nuevo/'+item)
-        r.status_code
-
+        API_ENDPOINT = 'https://api.mercadolibre.com/sites/MLA/search'
+        API_KEY = 'Sk9ad1lvdqhUsVc4VWdSX1L1f648zxsJ'
         fecha = str(datetime.now())
         fecha = fecha[:10]
 
-        soup = BeautifulSoup(r.content, 'html.parser')
-        titulos = soup.find_all('h2', attrs={"class":"ui-search-item__title"})
-        titulos = [i.text for i in titulos]
-        urls = soup.find_all('a', attrs={"class":"ui-search-item__group__element ui-search-link__title-card ui-search-link"})
-        urls = [i.get('href') for i in urls]
-        dom = etree.HTML(str(soup))
-        precios = dom.xpath('//li[@class="ui-search-layout__item"]//span[@class="andes-money-amount ui-search-price__part ui-search-price__part--medium andes-money-amount--cents-superscript"]//span[@class="andes-money-amount__fraction"]')
-        precios = [i.text.replace('.','') for i in precios]
-        imgs = soup.find_all('img', attrs={"class": "ui-search-result-image__element"})
+        # Make the request to the MercadoLibre API
+        params = {'q': item, 'limit': 10}  # You can adjust the limit as needed
+        headers = {'Authorization': f'Bearer {API_KEY}'}
+        response = requests.get(API_ENDPOINT, params=params, headers=headers)
 
-        imgs = [i['data-src'] for i in imgs]
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Parse the JSON response
+            data = response.json()
+            results = data.get('results', [])
 
-        d = [{'Item_buscado': item, 'Titulo': x, 'Precio': y, 'URL': z, 'Fecha': fecha, 'Img': img}
-             for x, y, z, img in zip(titulos[:10], precios[:10], urls[:10], imgs[:10])]
-        pretty_json = json.dumps(d, sort_keys=True, indent=4)
+            # Extract relevant information from the response
+            formatted_results = []
+            for result in results:
+                item_info = {
+                    'Item_buscado': item,
+                    'Titulo': result.get('title', ''),
+                    'Precio': result.get('price', 0),
+                    'URL': result.get('permalink', ''),
+                    'Fecha': fecha,
+                    'Img': result.get('thumbnail', '')
+                }
+                formatted_results.append(item_info)
+             
         collection = db["melicompara"]
-
-        # Convierte el JSON en un objeto Python
-        data = json.loads(pretty_json)
-
-        # Inserta los datos en la colección
-        collection.insert_many(data)
+        collection.insert_many(formatted_results)
         return redirect(url_for("item", product_name=item, search_date=fecha))
     else:
         return render_template('index.html')
