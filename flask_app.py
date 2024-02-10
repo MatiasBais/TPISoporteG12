@@ -29,7 +29,7 @@ def get_item():
         soup = BeautifulSoup(r.content, 'html.parser')
         titulos = soup.find_all('h2', attrs={"class":"ui-search-item__title"})
         titulos = [i.text for i in titulos]
-        urls = soup.find_all('a', attrs={"class":"ui-search-item__group__element ui-search-link"})
+        urls = soup.find_all('a', attrs={"class":"ui-search-item__group__element ui-search-link__title-card ui-search-link"})
         urls = [i.get('href') for i in urls]
         dom = etree.HTML(str(soup))
         precios = dom.xpath('//li[@class="ui-search-layout__item"]//span[@class="andes-money-amount ui-search-price__part ui-search-price__part--medium andes-money-amount--cents-superscript"]//span[@class="andes-money-amount__fraction"]')
@@ -41,7 +41,7 @@ def get_item():
         d = [{'Item_buscado': item, 'Titulo': x, 'Precio': y, 'URL': z, 'Fecha': fecha, 'Img': img}
              for x, y, z, img in zip(titulos[:10], precios[:10], urls[:10], imgs[:10])]
         pretty_json = json.dumps(d, sort_keys=True, indent=4)
-        collection = db["Grupo12Collection"]
+        collection = db["melicompara"]
 
         # Convierte el JSON en un objeto Python
         data = json.loads(pretty_json)
@@ -55,7 +55,7 @@ def get_item():
 
 @app.route("/<product_name>/<search_date>")
 def item(product_name, search_date):
-    products = db["Grupo12Collection"]
+    products = db["melicompara"]
     valores = products.find({"Item_buscado": product_name, "Fecha": search_date})
     acum = 0
     bajo2 = 9999999999999999
@@ -92,7 +92,7 @@ def plot_png(product_name):
 
 
 def createGraph(product_name):
-    products = db["Grupo12Collection"]
+    products = db["melicompara"]
     valores = products.find({"Item_buscado": product_name.lower()}).sort("Fecha")
     fechas=[]
     for i in valores:
