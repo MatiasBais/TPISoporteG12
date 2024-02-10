@@ -18,6 +18,10 @@ db_connection = mysql.connector.connect(
     database=MYSQL_DATABASE
 )
 
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
+
 #Method get
 @app.route('/', methods=['POST', 'GET'])
 def get_item():
